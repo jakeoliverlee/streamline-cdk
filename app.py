@@ -26,9 +26,12 @@ instance_sg = ec2.SecurityGroup(
     allow_all_outbound=True,
 )
 instance_sg.add_ingress_rule(
-    ec2.Peer.any_ipv4(),
-    ec2.Port.tcp(22),
-    "allow SSH access from anywhere",
+    elbv2.SecurityGroup(
+        app, "streamline-alb-sg",
+        vpc=vpc,
+    ),
+    ec2.Port.tcp_range(80, 443),
+    "allow HTTP/HTTPS traffic from ALB",
 )
 
 # create an Application Load Balancer
@@ -37,11 +40,7 @@ alb = elbv2.ApplicationLoadBalancer(
     vpc=vpc,
     internet_facing=True,
 )
-alb.connections.allow_from(
-    instance_sg,
-    ec2.Port.tcp_range(80, 443),
-    "allow HTTP/HTTPS traffic from instances",
-)
+alb.connections.allow_default_port_from_any_ipv4("allow public access to ALB")
 
 # create an Auto Scaling Group
 asg = autoscaling.AutoScalingGroup(
@@ -52,6 +51,7 @@ asg = autoscaling.AutoScalingGroup(
     min_capacity=2,
     max_capacity=4,
     desired_capacity=2,
+    security_group=instance_sg,
     user_data=core.Fn.base64(
             "#!/bin/bash\n"
             "# Version 1.0.0\n"
@@ -83,6 +83,7 @@ asg = autoscaling.AutoScalingGroup(
             "# Attach to the TMUX session to view the app\n"
             "tmux attach -t streamline_session\n"
     ),
+    desired_capacity=3,
 )
 asg.connections.allow_from(alb, ec2.Port.tcp_range(80, 443), "allow HTTP/HTTPS traffic from ALB")
 
