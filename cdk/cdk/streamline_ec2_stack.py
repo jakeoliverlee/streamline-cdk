@@ -35,17 +35,47 @@ class CdkStack(Stack):
                                allow_all_outbound=True,
                            )
 
-        # Security group for load balancer
+        sg_ec2.add_ingress_rule(
+            peer=ec2.Peer.security_group_id("<INPUT ALB_SECURITY_GROUP_ID"),
+            connection=ec2.Port.tcp(80),
+            description="Allow HTTP traffic from load balancer"
+        )
+
+        sg_ec2.add_ingress_rule(
+            peer=ec2.Peer.any_ipv4(),
+            connection=ec2.Port.tcp(22),
+            description="Allow ssh from anywhere"
+        )
+
+        sg_ec2.add_ingress_rule(
+            peer=ec2.Peer.security_group_id("<INPUT ALB_SECURITY_GROUP_ID"),
+            connection=ec2.Port.tcp(443),
+            description="Allow HTTPS traffic from load balancer"
+        )
+
+         # Security group for load balancer
         sg_alb = ec2.SecurityGroup(
             self,
             id = "streamline-sg-alb",
             vpc = vpc,
         )
 
-        sg_ec2.add_ingress_rule(
-            peer=ec2.Peer.security_group_id("<INPUT ALB_SECURITY_GROUP_ID"),
+        sg_alb.add_ingress_rule(
+            peer=ec2.Peer.any_ipv4(),
+            connection=ec2.Port.tcp(443),
+            description="Allow HTTPS traffic from internet"
+        )
+
+        sg_alb.add_ingress_rule(
+            peer=ec2.Peer.any_ipv4(),
             connection=ec2.Port.tcp(80),
-            description="Allow HTTP traffic from load balancer"
+            description="Allow HTTP traffic from internet"
+        )
+
+        sg_alb.add_ingress_rule(
+            peer=ec2.Peer.any_ipv4(),
+            connection=ec2.Port.tcp(22),
+            description="Allow SSH traffic from internet"
         )
 
 
