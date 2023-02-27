@@ -116,6 +116,10 @@ class CdkStack(Stack):
                              port=80,
                              targets=[self.asg])
 
+        listener_443.add_targets("addTargetGroup",
+                             port=443,
+                             targets=[self.asg])
+
         CfnOutput(self, "Output",
                        value=alb.load_balancer_dns_name)
 
