@@ -7,6 +7,7 @@ from aws_cdk import (
 )
 from constructs import Construct
 
+
 with open("./user_data/user_data.sh") as f:
     user_data = f.read()
 
@@ -17,6 +18,7 @@ linux_ami = ec2.AmazonLinuxImage(generation=ec2.AmazonLinuxGeneration.AMAZON_LIN
                                  virtualization=ec2.AmazonLinuxVirt.HVM,
                                  storage=ec2.AmazonLinuxStorage.GENERAL_PURPOSE
                                  )
+
 
 class CdkStack(Stack):
 
@@ -36,21 +38,9 @@ class CdkStack(Stack):
                            )
 
         sg_ec2.add_ingress_rule(
-            peer=ec2.Peer.security_group_id("<INPUT ALB_SECURITY_GROUP_ID"),
-            connection=ec2.Port.tcp(80),
-            description="Allow HTTP traffic from load balancer"
-        )
-
-        sg_ec2.add_ingress_rule(
             peer=ec2.Peer.any_ipv4(),
             connection=ec2.Port.tcp(22),
             description="Allow ssh from anywhere"
-        )
-
-        sg_ec2.add_ingress_rule(
-            peer=ec2.Peer.security_group_id("<INPUT ALB_SECURITY_GROUP_ID"),
-            connection=ec2.Port.tcp(443),
-            description="Allow HTTPS traffic from load balancer"
         )
 
          # Security group for load balancer
@@ -78,7 +68,6 @@ class CdkStack(Stack):
             description="Allow SSH traffic from internet"
         )
 
-
         # Instance Role and SSM Managed Policy
         role = iam.Role(self, "InstanceSSM", assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"))
 
@@ -90,10 +79,17 @@ class CdkStack(Stack):
                                           internet_facing=True,
                                           load_balancer_name="streamline-alb"
                                           )
+
         alb.connections.allow_from_any_ipv4(
-        ec2.Port.tcp([80,443]),
-            "Internet access ALB 80,443"
+        ec2.Port.tcp(80),
+            "Internet access ALB 80"
             )
+
+        alb.connections.allow_from_any_ipv4(
+        ec2.Port.tcp(443),
+            "Internet access ALB 443"
+            )
+
         listener_80 = alb.add_listener("my80",
                                     port=80,
                                     open=True)
@@ -113,7 +109,9 @@ class CdkStack(Stack):
                                                 min_capacity=2,
                                                 max_capacity=4,
                                                 )
+
         self.asg.connections.allow_from(alb, ec2.Port.tcp(80), "ALB access 80 port of EC2 in Autoscaling Group")
+
         listener_80.add_targets("addTargetGroup",
                              port=80,
                              targets=[self.asg])
