@@ -29,6 +29,25 @@ class CdkStack(Stack):
             subnet_configuration=[ec2.SubnetConfiguration(name="public",subnet_type=ec2.SubnetType.PUBLIC)]
             )
 
+        # Security Group for ec2 instances for asg
+        sg_ec2 = ec2.SecurityGroup(self, id="streamline-sg-ec2-instances",
+                               vpc=vpc,
+                               allow_all_outbound=True,
+                           )
+
+        # Security group for load balancer
+        sg_alb = ec2.SecurityGroup(
+            self,
+            id = "streamline-sg-alb",
+            vpc = vpc,
+        )
+
+        sg_ec2.add_ingress_rule(
+            peer=ec2.Peer.security_group_id("<INPUT ALB_SECURITY_GROUP_ID"),
+            connection=ec2.Port.tcp(80),
+            description="Allow HTTP traffic from load balancer"
+        )
+
 
         # Instance Role and SSM Managed Policy
         role = iam.Role(self, "InstanceSSM", assumed_by=iam.ServicePrincipal("ec2.amazonaws.com"))
