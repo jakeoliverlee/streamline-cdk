@@ -28,6 +28,7 @@ class CdkStack(Stack):
         # VPC
         vpc = ec2.Vpc(self, "streamline-vpc",
             nat_gateways=0,
+            availability_zones=["eu-west-2"],
             subnet_configuration=[ec2.SubnetConfiguration(name="public",subnet_type=ec2.SubnetType.PUBLIC)]
             )
 
